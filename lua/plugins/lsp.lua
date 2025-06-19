@@ -129,6 +129,7 @@ return {
 			"stylua",
 			"rust_analyzer",
 			"prettierd",
+			"gopls",
 		})
 		require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
