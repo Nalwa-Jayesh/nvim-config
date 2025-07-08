@@ -4,87 +4,14 @@ return {
 		{ "mason-org/mason.nvim", opts = {} },
 		"mason-org/mason-lspconfig.nvim",
 		"WhoIsSethDaniel/mason-tool-installer.nvim",
-
 		{ "j-hui/fidget.nvim", opts = {} },
-
 		"saghen/blink.cmp",
 	},
 	config = function()
-		vim.api.nvim_create_autocmd("LspAttach", {
-			group = vim.api.nvim_create_augroup("kickstart-lsp-attach", { clear = true }),
-			callback = function(event)
-				local map = function(keys, func, desc, mode)
-					mode = mode or "n"
-					vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
-				end
+		local lspconfig = require("lspconfig")
+		local capabilities = require("blink.cmp").get_lsp_capabilities()
 
-				map("grn", vim.lsp.buf.rename, "[R]e[n]ame")
-				map("gra", vim.lsp.buf.code_action, "[G]oto Code [A]ction", { "n", "x" })
-				map("grr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
-				map("gri", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
-				map("grd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
-				map("grD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
-				map("gO", require("telescope.builtin").lsp_document_symbols, "Open Document Symbols")
-				map("gW", require("telescope.builtin").lsp_dynamic_workspace_symbols, "Open Workspace Symbols")
-				map("grt", require("telescope.builtin").lsp_type_definitions, "[G]oto [T]ype Definition")
-				map("[d", vim.diagnostic.goto_prev, "Go to Previous Diagnostic")
-				map("]d", vim.diagnostic.goto_next, "Go to Next Diagnostic")
-
-				---@param client vim.lsp.Client
-				---@param method vim.lsp.protocol.Method
-				---@param bufnr? integer some lsp support methods only in specific files
-				---@return boolean
-
-				local function client_supports_method(client, method, bufnr)
-					if vim.fn.has("nvim-0.11") == 1 then
-						return client:supports_method(method, bufnr)
-					else
-						return client.supports_method(method, { bufnr = bufnr })
-					end
-				end
-
-				local client = vim.lsp.get_client_by_id(event.data.client_id)
-				if
-					client
-					and client_supports_method(
-						client,
-						vim.lsp.protocol.Methods.textDocument_documentHighlight,
-						event.buf
-					)
-				then
-					local highlight_augroup = vim.api.nvim_create_augroup("kickstart-lsp-highlight", { clear = false })
-					vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
-						buffer = event.buf,
-						group = highlight_augroup,
-						callback = vim.lsp.buf.document_highlight,
-					})
-
-					vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-						buffer = event.buf,
-						group = highlight_augroup,
-						callback = vim.lsp.buf.clear_references,
-					})
-
-					vim.api.nvim_create_autocmd("LspDetach", {
-						group = vim.api.nvim_create_augroup("kickstart-lsp-detach", { clear = true }),
-						callback = function(event2)
-							vim.lsp.buf.clear_references()
-							vim.api.nvim_clear_autocmds({ group = "kickstart-lsp-highlight", buffer = event2.buf })
-						end,
-					})
-				end
-
-				if
-					client
-					and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf)
-				then
-					map("<leader>th", function()
-						vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
-					end, "[T]oggle Inlay [H]ints")
-				end
-			end,
-		})
-
+		-- Diagnostic UI settings
 		vim.diagnostic.config({
 			severity_sort = true,
 			float = { border = "rounded", source = "if_many" },
@@ -101,72 +28,124 @@ return {
 				source = "if_many",
 				spacing = 2,
 				format = function(diagnostic)
-					local diagnostic_message = {
-						[vim.diagnostic.severity.ERROR] = diagnostic.message,
-						[vim.diagnostic.severity.WARN] = diagnostic.message,
-						[vim.diagnostic.severity.INFO] = diagnostic.message,
-						[vim.diagnostic.severity.HINT] = diagnostic.message,
-					}
-					return diagnostic_message[diagnostic.severity]
+					return diagnostic.message
 				end,
 			},
 		})
 
-		local capabilities = require("blink.cmp").get_lsp_capabilities()
+		-- LSP keymaps + enhancements
+		vim.api.nvim_create_autocmd("LspAttach", {
+			group = vim.api.nvim_create_augroup("kickstart-lsp-attach", { clear = true }),
+			callback = function(event)
+				local map = function(keys, func, desc, mode)
+					vim.keymap.set(mode or "n", keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
+				end
 
+				map("grn", vim.lsp.buf.rename, "[R]e[n]ame")
+				map("gra", vim.lsp.buf.code_action, "[G]oto Code [A]ction", { "n", "x" })
+				map("grr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
+				map("gri", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
+				map("grd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
+				map("grD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
+				map("gO", require("telescope.builtin").lsp_document_symbols, "Open Document Symbols")
+				map("gW", require("telescope.builtin").lsp_dynamic_workspace_symbols, "Open Workspace Symbols")
+				map("grt", require("telescope.builtin").lsp_type_definitions, "[G]oto [T]ype Definition")
+				map("[d", vim.diagnostic.goto_prev, "Go to Previous Diagnostic")
+				map("]d", vim.diagnostic.goto_next, "Go to Next Diagnostic")
+
+				local client = vim.lsp.get_client_by_id(event.data.client_id)
+
+				local function supports(method)
+					if not client then
+						return false
+					end
+					return client.supports_method and client:supports_method(method, { bufnr = event.buf })
+				end
+
+				if supports("textDocument/documentHighlight") then
+					local hl_group = vim.api.nvim_create_augroup("kickstart-lsp-highlight", { clear = false })
+					vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+						buffer = event.buf,
+						group = hl_group,
+						callback = vim.lsp.buf.document_highlight,
+					})
+					vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+						buffer = event.buf,
+						group = hl_group,
+						callback = vim.lsp.buf.clear_references,
+					})
+					vim.api.nvim_create_autocmd("LspDetach", {
+						group = vim.api.nvim_create_augroup("kickstart-lsp-detach", { clear = true }),
+						callback = function(event2)
+							vim.lsp.buf.clear_references()
+							vim.api.nvim_clear_autocmds({ group = "kickstart-lsp-highlight", buffer = event2.buf })
+						end,
+					})
+				end
+
+				if supports("textDocument/inlayHint") then
+					map("<leader>th", function()
+						vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
+					end, "[T]oggle Inlay [H]ints")
+				end
+			end,
+		})
+
+		-- Define LSP servers manually
 		local servers = {
 			lua_ls = {
 				filetypes = { "lua" },
 				settings = {
 					Lua = {
-						completion = {
-							callSnippet = "Replace",
-						},
+						completion = { callSnippet = "Replace" },
+						diagnostics = { globals = { "vim" } },
 					},
 				},
 			},
-
-			pyright = {
-				cmd = { "pyright-langserver", "--stdio" },
-				filetypes = { "python" }, -- restrict to .py files
-				settings = {
-					disableOrganizeImports = true,
-					python = {
-						analysis = {
-							ignore = { "*" },
-							autoImportCompletions = false,
-						},
-					},
-				},
-			},
-
 			rust_analyzer = {
 				filetypes = { "rust" },
 			},
-
 			gopls = {
 				filetypes = { "go", "gomod", "gowork", "gotmpl" },
 			},
+			pyright = {
+				filetypes = { "python" },
+				settings = {
+					python = {
+						analysis = {
+							typeCheckingMode = "basic",
+							autoImportCompletions = true,
+							diagnosticMode = "openFilesOnly",
+						},
+					},
+				},
+			},
 		}
 
-		local ensure_installed = vim.tbl_keys(servers or {})
-		vim.list_extend(ensure_installed, {
-			"stylua",
-			"rust_analyzer",
-			"prettierd",
-			"gopls",
-			"ruff",
-		})
-		require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+		-- LSPs to install (match above)
+		local lsp_list = vim.tbl_keys(servers)
 
+		-- Formatters / linters / tools to install via Mason
+		local tools = {
+			"stylua",
+			"prettierd",
+			"ruff",
+		}
+
+		-- Setup mason-tool-installer for tools only
+		require("mason-tool-installer").setup({
+			ensure_installed = tools,
+		})
+
+		-- Setup mason-lspconfig for servers only
 		require("mason-lspconfig").setup({
-			ensure_installed = {},
-			automatic_install = false,
+			ensure_installed = lsp_list,
+			automatic_installation = false,
 			handlers = {
 				function(server_name)
-					local server = servers[server_name] or {}
-					server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
-					require("lspconfig")[server_name].setup(server)
+					local config = servers[server_name] or {}
+					config.capabilities = vim.tbl_deep_extend("force", {}, capabilities, config.capabilities or {})
+					lspconfig[server_name].setup(config)
 				end,
 			},
 		})
