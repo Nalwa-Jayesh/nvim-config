@@ -27,6 +27,8 @@ return {
 				map("gO", require("telescope.builtin").lsp_document_symbols, "Open Document Symbols")
 				map("gW", require("telescope.builtin").lsp_dynamic_workspace_symbols, "Open Workspace Symbols")
 				map("grt", require("telescope.builtin").lsp_type_definitions, "[G]oto [T]ype Definition")
+				map("[d", vim.diagnostic.goto_prev, "Go to Previous Diagnostic")
+				map("]d", vim.diagnostic.goto_next, "Go to Next Diagnostic")
 
 				---@param client vim.lsp.Client
 				---@param method vim.lsp.protocol.Method
@@ -85,7 +87,7 @@ return {
 
 		vim.diagnostic.config({
 			severity_sort = true,
-			float = { border = "round", source = "if_many" },
+			float = { border = "rounded", source = "if_many" },
 			underline = { severity = vim.diagnostic.severity.ERROR },
 			signs = vim.g.have_nerd_font and {
 				text = {
@@ -114,6 +116,7 @@ return {
 
 		local servers = {
 			lua_ls = {
+				filetypes = { "lua" },
 				settings = {
 					Lua = {
 						completion = {
@@ -121,6 +124,28 @@ return {
 						},
 					},
 				},
+			},
+
+			pyright = {
+				cmd = { "pyright-langserver", "--stdio" },
+				filetypes = { "python" }, -- restrict to .py files
+				settings = {
+					disableOrganizeImports = true,
+					python = {
+						analysis = {
+							ignore = { "*" },
+							autoImportCompletions = false,
+						},
+					},
+				},
+			},
+
+			rust_analyzer = {
+				filetypes = { "rust" },
+			},
+
+			gopls = {
+				filetypes = { "go", "gomod", "gowork", "gotmpl" },
 			},
 		}
 
@@ -130,6 +155,7 @@ return {
 			"rust_analyzer",
 			"prettierd",
 			"gopls",
+			"ruff",
 		})
 		require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
