@@ -120,6 +120,96 @@ return {
 					},
 				},
 			},
+			ts_ls = {
+				filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+				settings = {
+					typescript = {
+						inlayHints = {
+							includeInlayParameterNameHints = "all",
+							includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+							includeInlayFunctionParameterTypeHints = true,
+							includeInlayVariableTypeHints = true,
+							includeInlayPropertyDeclarationTypeHints = true,
+							includeInlayFunctionLikeReturnTypeHints = true,
+							includeInlayEnumMemberValueHints = true,
+						},
+					},
+
+					javascript = {
+						inlayHints = {
+							includeInlayParameterNameHints = "all",
+							includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+							includeInlayFunctionParameterTypeHints = true,
+							includeInlayVariableTypeHints = true,
+							includeInlayPropertyDeclarationTypeHints = true,
+							includeInlayFunctionLikeReturnTypeHints = true,
+							includeInlayEnumMemberValueHints = true,
+						},
+					},
+				},
+			},
+
+			cssls = {
+				filetypes = { "css", "scss", "less" },
+				settings = {
+					css = {
+						validate = true,
+						lint = {
+							unknownAtRules = "ignore",
+						},
+					},
+					scss = {
+						validate = true,
+						lint = {
+							unknownAtRules = "ignore",
+						},
+					},
+					less = {
+						validate = true,
+						lint = {
+							unknownAtRules = "ignore",
+						},
+					},
+				},
+			},
+			html = {
+				filetypes = { "html", "htmldjango" },
+				settings = {
+					html = {
+						format = {
+							templating = true,
+							wrapLineLength = 120,
+							wrapAttributes = "auto",
+						},
+						hover = {
+							documentation = true,
+							references = true,
+						},
+					},
+				},
+			},
+			jsonls = {
+				filetypes = { "json", "jsonc" },
+				settings = {
+					json = {
+						schemas = require("schemastore").json.schemas(),
+						validate = { enable = true },
+					},
+				},
+			},
+			tailwindcss = {
+				filetypes = { "html", "css", "scss", "javascript", "javascriptreact", "typescript", "typescriptreact" },
+				settings = {
+					tailwindCSS = {
+						experimental = {
+							classRegex = {
+								{ "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+								{ "cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)" },
+							},
+						},
+					},
+				},
+			},
 		}
 
 		-- LSPs to install (match above)
@@ -130,6 +220,9 @@ return {
 			"stylua",
 			"prettierd",
 			"ruff",
+			"prettier", -- JavaScript/TypeScript/CSS/HTML/JSON formatter
+			"eslint_d", -- Fast ESLint daemon
+			"js-debug-adapter",
 		}
 
 		-- Setup mason-tool-installer for tools only
